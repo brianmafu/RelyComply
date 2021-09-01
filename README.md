@@ -1,5 +1,4 @@
-#Siyavula Education Technical Project
-
+#RelyComply Risk Management System
 ## Environmental Variables
 Copy `example.env` to `.env`.  
 Put your SQLAlchemy connection string into `.env` where indicated.  
