@@ -19,54 +19,59 @@ db = SQLAlchemy(app)
 
 migrate = Migrate(app, db)
 
+
+def refreshCustomerList():
+    customers =  db.session.query(models.Customer).all()
+    # update/format status field
+    for c in customers:
+        try:
+            c.status = "({}-{})".format(c.status,models.STATUS[c.status])
+        except:
+            pass
+
+
 @app.errorhandler(404)
 def resource_not_found(exception):
     """Returns exceptions as part of a json."""
     return jsonify(error=str(exception)), 404
 @app.route("/".format(API_VERSION))
 def index():
-    customers =  db.session.query(models.Customer).all()
-    # update/format status field
-    for c in customers:
-        c.status = "({}-{})".format(c.status,models.STATUS[c.status])
+
+    customers = refreshCustomerList()
     return render_template("index.html", customers=customers)
+
+
+
 
 @app.route("/{}/add-customer".format(API_VERSION), methods=["POST"])
 def add_customer():
     """Receives Customer Information and Adds it to Database"""
-    print('on added customer')
+    customers = refreshCustomerList()
+
+
     try:
         first_name = request.form.get('first_name', None)
         last_name = request.form.get('last_name', None)
         dob = request.form.get('dob', None)
         from datetime import datetime
+        # format date
         dob = datetime.strptime(dob, '%Y-%m-%d')
         monthly_income = request.form.get('monthly_income', 0)
         if first_name and last_name and dob and monthly_income:
             custom_information = models.Customer(first_name=str(first_name),last_name=str(last_name),\
                 date_added=date.today(), dob=dob, monthly_income=float(monthly_income))
             db.session.add(custom_information)
-            db.session.commit()   
-            customers =  db.session.query(models.Customer).all()
-            for c in customers:
-                c.status = "({}-{})".format(c.status,models.STATUS[c.status])
+            db.session.commit()  
+            customers = refreshCustomerList()
+ 
+            return render_template("index.html", customers=customers,  message="Customer has been Added")
 
-            return redirect(url_for('index', customers=customers, message="Customer has been Added"))
         else:
-            return jsonify(
-                message="Failed to Add Customer",
-                first_name=first_name,
-                status = str(200)
-            )
-    except Exception as e:
-        print(e)
-        return jsonify(
-        message = "Exception:{}".format(str(e)),
-        customers = [],
-        count = 0,
-        status = str(500)
+            return render_template("index.html", customers=customers,  message="Failed to Add Customer")
 
-    )
+    except Exception as e:
+        return render_template("index.html", customers=customers,  message="Exception: {}".format(str(e)))
+
 
 
 @app.route("/{}/all-customers".format(API_VERSION), methods=["GET"])
