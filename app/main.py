@@ -19,36 +19,60 @@ db = SQLAlchemy(app)
 
 migrate = Migrate(app, db)
 
+MESSAGE =""
+
 
 def refreshCustomerList():
     customers =  db.session.query(models.Customer).all()
-    # update/format status field
-    for c in customers:
-        try:
-            c.status = "({}-{})".format(c.status,models.STATUS[c.status])
-        except:
-            pass
+    return customers
 
 
 @app.errorhandler(404)
 def resource_not_found(exception):
     """Returns exceptions as part of a json."""
     return jsonify(error=str(exception)), 404
+
 @app.route("/".format(API_VERSION))
 def index():
 
     customers = refreshCustomerList()
-    return render_template("index.html", customers=customers)
+    return render_template("index.html", customers=customers, message=MESSAGE)
 
 
 
-
-@app.route("/{}/add-customer".format(API_VERSION), methods=["POST"])
-def add_customer():
-    """Receives Customer Information and Adds it to Database"""
+@app.route("/{}/decline-or-approve".format(API_VERSION), methods=["POST"])
+def decline_or_approved_customer():
+    action = request.json.get("action").title()
+    id = request.json.get("id")
+    try:
+        customer = models.Customer.query.filter_by(id=id).first()
+        if action == "Approved":
+            customer.status = "APPROVED-1"
+        if action == "Declined":
+            customer.status = "DECLINED-2"
+        try:
+            db.session.merge(customer)
+            db.session.commit()
+        except:
+            db.session.rollback()
+        finally:
+            db.session.close()
+    except Exception as e:
+        print(e)
     customers = refreshCustomerList()
+    return render_template("index.html", customers=customers,  message="Customer has been Added")
 
 
+@app.route("/{}/add-customer".format(API_VERSION), methods=["POST", "GET"])
+def add_customer():
+    """Saves customer information to database"""
+
+    global MESSAGE
+    if request.method == "GET":
+        return redirect(url_for("index"))
+    
+    
+    customers = refreshCustomerList()
     try:
         first_name = request.form.get('first_name', None)
         last_name = request.form.get('last_name', None)
@@ -63,72 +87,20 @@ def add_customer():
             db.session.add(custom_information)
             db.session.commit()  
             customers = refreshCustomerList()
- 
-            return render_template("index.html", customers=customers,  message="Customer has been Added")
+            MESSAGE = "Customer has been added"
+            return redirect(url_for('index'))
 
         else:
+            MESSAGE = "Failed to Add Customer"
             return render_template("index.html", customers=customers,  message="Failed to Add Customer")
 
     except Exception as e:
-        return render_template("index.html", customers=customers,  message="Exception: {}".format(str(e)))
+        if "time data" in str(e):
+            MESSAGE = "EXCEPTION: Date of Birth Not Selected"
+        return redirect(url_for('index'))
 
 
-
-@app.route("/{}/all-customers".format(API_VERSION), methods=["GET"])
-def all_customers():
-    """Return All Customers"""
-    try:
-            customers =  db.session.query(models.Customer).all()
-            return jsonify(
-            message= "Customers Found!",
-            customers=[i.serialize for i in customers],
-            count = len(customers),
-            status = str(200)
-        )
-    except Exception as e:
-        return jsonify(
-            message = "Exception:{}".format(str(e)),
-            customers = [],
-            count = 0,
-            status = str(200)
-        )
-
-# @app.route("/{}/search-item".format(API_VERSION), methods=["POST"])
-# def search_items():
-#     """Search for Item"""
-#     try:
-#         data = request.json
-
-#         if not data:
-#             data = request.form
-
-#         search_primer =  data.get("search_primer", None)
-#         if not search_primer: return jsonify(message="No Items Found!",
-#         items=[]
-#         )
-
-#         list_items =  db.session.query(models.ListItem).all()
-#         if list_items:
-#             # filter items based on search key
-#             list_items = [
-#                 i.serialize for i in list_items if search_primer in str(
-#                     i.serialize.get("name", ""))
-#             ]
-            
-#         return jsonify(
-#         message = "Items Found!" if len(list_items)>0 else "No Items Found",
-#         items=[i for i in list_items
-#         ],
-#         count = len(list_items),
-#         status = str(200),
-#         )
-#     except Exception as e:
-#         return jsonify(
-#             message = "Exception:{}".format(str(e)),
-#             count = 0,
-#             items =[],
-#             status = str(500)
-#         )
+ 
 
 if __name__ == "__main__":
   

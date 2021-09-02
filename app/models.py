@@ -45,7 +45,7 @@ class Customer(db.Model):
     monthly_income = Column(Float)
     dob = Column(DateTime)
     date_added = Column(DateTime)
-    status = Column(String(1000), default="PENDING")
+    status = Column(String(1000), default="PENDING-7")
 
     @property
     def serialize(self):

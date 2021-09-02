@@ -34,11 +34,45 @@
               <td> {{customer["monthly_income"]}}</td>
               <td> {{customer["dob"]}}</td>
               <td>{{customer['status']}}</td>
-              <td><button>Approve</button>|<button>Decline</button></td>	
+              <td><button onClick="onApprove({{customer['id']}})">Approve</button>|<button onclick="onDecline({{customer['id']}})">Decline</button></td>	
            </tr>
         {% endfor %}
      </table>
    </body>
-   
+<script>
+
+    function onApprove(id) {
+        console.log("approved");
+        console.log(id);
+        fetch("v1/decline-or-approve",{
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+           method: "post",
+           body: JSON.stringify({ "id": id, "action": "approved"})
+        }).then(response => {
+
+            console.log(response);
+        });
+    }
+
+    function onDecline(id) {
+
+
+      fetch("v1/decline-or-approve",{
+         headers: {
+           'Accept': 'application/json',
+           'Content-Type': 'application/json'
+         },
+          method: "post",
+          body: JSON.stringify({ "id": id, "action": "declined"})
+       }).then(response => {
+           console.log(response);
+       });
+     
+    }
+
+</script>
   
 </html>
