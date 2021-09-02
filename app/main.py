@@ -3,8 +3,7 @@
 from flask import Flask, json, jsonify, request, render_template, redirect, url_for
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-import asyncio
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 
 
 
@@ -152,7 +151,7 @@ def add_customer():
             MESSAGE = "Customer has been added: Status Pending-7. Validating Sanctions List"
             # list check process here
             # AYSNC PROCESS HERE
-            checkInListProcess = Process(  # Create a daemonic process with heavy "my_func"
+            checkInListProcess = Process(
                 target=checkInList,
                 args=("sanctionslist.txt",int(customer.id)),
                 daemon=True
