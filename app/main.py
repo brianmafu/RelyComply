@@ -4,9 +4,11 @@ from flask import Flask, json, jsonify, request, render_template, redirect, url_
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 import asyncio
+from multiprocessing import Process
 
 
-from datetime import date
+
+from datetime import date, time
 
 from . import models
 from .database import DATABASE_URL
@@ -25,7 +27,7 @@ MESSAGE =""
 
 
 def refreshCustomerList():
-    customers =  db.Customer.query(models.Customer).all()
+    customers =  db.session.query(models.Customer).all()
     return customers
 
 def dbUpdate(customer=None):
@@ -39,13 +41,14 @@ def dbUpdate(customer=None):
         db.session.close()
 
 # long running process for check user in either sanctions list or pep list
-async def checkInList(list_file_name=None, customer_id=0):
+def checkInList(list_file_name, customer_id):
     if list_file_name:
         customer = models.Customer.query.filter_by(id=int(customer_id)).first()
         if not customer: return False
         first_name = customer.first_name
         last_name = customer.last_name
         dob = customer.dob
+        print("Starting to checklist: {}".format(list_file_name))
         with open(list_file_name) as f:
             lines = f.readlines()
             for line in lines:
@@ -57,8 +60,10 @@ async def checkInList(list_file_name=None, customer_id=0):
                     if list_file_name == "peplist.txt":
                         customer.status = "PEP_LIST_FOUND-5"
                     dbUpdate(customer)
-                await asyncio.sleep(10)
-                return True
+                    return True
+
+                import time
+                time.sleep(10)
         # if customer is not found in specific list-update status and save and return False
         if list_file_name == "sanctionlists.txt":
             customer.status = "SANCTION_LIST_NOT_FOUND-4"
@@ -136,7 +141,12 @@ def add_customer():
             MESSAGE = "Customer has been added"
             # list check process here
             # AYSNC PROCESS HERE
-            checkInList(list_file_name="sanctionslist.txt", customer_id=int(customer.id))
+            checkInListProcess = Process(  # Create a daemonic process with heavy "my_func"
+                target=checkInList,
+                args=("sanctionslist.txt",int(customer.id)),
+                daemon=True
+            )
+            checkInListProcess.start()
             return redirect(url_for('index'))
 
         else:
