@@ -3,6 +3,8 @@
 from flask import Flask, json, jsonify, request, render_template, redirect, url_for
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+import asyncio
+
 
 from datetime import date
 
@@ -23,8 +25,49 @@ MESSAGE =""
 
 
 def refreshCustomerList():
-    customers =  db.session.query(models.Customer).all()
+    customers =  db.Customer.query(models.Customer).all()
     return customers
+
+def dbUpdate(customer=None):
+    if not customer: return
+    try:
+        db.session.merge(customer)
+        db.session.commit()
+    except:
+        db.session.rollback()
+    finally:
+        db.session.close()
+
+# long running process for check user in either sanctions list or pep list
+async def checkInList(list_file_name=None, customer_id=0):
+    if list_file_name:
+        customer = models.Customer.query.filter_by(id=int(customer_id)).first()
+        if not customer: return False
+        first_name = customer.first_name
+        last_name = customer.last_name
+        dob = customer.dob
+        with open(list_file_name) as f:
+            lines = f.readlines()
+            for line in lines:
+                print('Line: {}'.format(line))
+                if first_name.lower() in line.lower() or last_name in line.lower():
+                    #if user found on the list make them change to appropriate status
+                    if list_file_name == "sanctionlists.txt":
+                        customer.status = "SANCTION_LIST_FOUND-3"
+                    if list_file_name == "peplist.txt":
+                        customer.status = "PEP_LIST_FOUND-5"
+                    dbUpdate(customer)
+                await asyncio.sleep(10)
+                return True
+        # if customer is not found in specific list-update status and save and return False
+        if list_file_name == "sanctionlists.txt":
+            customer.status = "SANCTION_LIST_NOT_FOUND-4"
+        if list_file_name == "peplist.txt":
+            customer.status = "PEP_LIST_NOT_FOUND-6"
+        dbUpdate(customer)
+        return False
+    return False
+
 
 
 @app.errorhandler(404)
@@ -60,6 +103,9 @@ def decline_or_approved_customer():
     except Exception as e:
         print(e)
     customers = refreshCustomerList()
+
+    # start long task here
+
     return render_template("index.html", customers=customers,  message="Customer has been Added")
 
 
@@ -82,12 +128,15 @@ def add_customer():
         dob = datetime.strptime(dob, '%Y-%m-%d')
         monthly_income = request.form.get('monthly_income', 0)
         if first_name and last_name and dob and monthly_income:
-            custom_information = models.Customer(first_name=str(first_name),last_name=str(last_name),\
+            customer = models.Customer(first_name=str(first_name),last_name=str(last_name),\
                 date_added=date.today(), dob=dob, monthly_income=float(monthly_income))
-            db.session.add(custom_information)
+            db.session.add(customer)
             db.session.commit()  
             customers = refreshCustomerList()
             MESSAGE = "Customer has been added"
+            # list check process here
+            # AYSNC PROCESS HERE
+            checkInList(list_file_name="sanctionslist.txt", customer_id=int(customer.id))
             return redirect(url_for('index'))
 
         else:

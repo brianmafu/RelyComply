@@ -26,13 +26,14 @@ def dump_datetime(value):
         return None
     return [value.strftime("%Y-%m-%d"), value.strftime("%H:%M:%S")]
 
+# WORKFLOW STATES
 STATUS = {
     "APPROVED": 1,
     "DENIED" : 2,
-    "SANCTION_APPROVED":3,
-    "SANCTION_DENIED": 4,
-    "PEP_APPROVED": 5,
-    "PEP_DENIED": 6,
+    "SANCTION_LIST_FOUND":3,
+    "SANCTION_LIST_NO_FOUND": 4,
+    "PEP_LIST_FOUND": 5,
+    "PEP_LIST_NOT_FOUND": 6,
     "PENDING": 7
 }
 
