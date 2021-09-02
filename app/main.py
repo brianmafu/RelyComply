@@ -63,7 +63,7 @@ def checkInList(list_file_name, customer_id):
                     return True
 
                 import time
-                time.sleep(10)
+                time.sleep(1)
         # if customer is not found in specific list-update status and save and return False
         if list_file_name == "sanctionlists.txt":
             customer.status = "SANCTION_LIST_NOT_FOUND-4"
@@ -138,7 +138,7 @@ def add_customer():
             db.session.add(customer)
             db.session.commit()  
             customers = refreshCustomerList()
-            MESSAGE = "Customer has been added"
+            MESSAGE = "Customer has been added: Status Pending-7. Validating Sanctions List"
             # list check process here
             # AYSNC PROCESS HERE
             checkInListProcess = Process(  # Create a daemonic process with heavy "my_func"
