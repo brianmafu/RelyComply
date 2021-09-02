@@ -28,7 +28,7 @@ def dump_datetime(value):
 
 # WORKFLOW STATES
 STATUS = {
-    "APPROVED": 1,
+    "ACCEPTED": 1,
     "DENIED" : 2,
     "SANCTION_LIST_FOUND":3,
     "SANCTION_LIST_NO_FOUND": 4,

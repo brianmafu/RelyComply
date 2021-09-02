@@ -98,30 +98,42 @@ def index():
 
 
 
-@app.route("/{}/decline-or-approve".format(API_VERSION), methods=["POST"])
-def decline_or_approved_customer():
+@app.route("/{}/decline-or-accept".format(API_VERSION), methods=["POST"])
+def decline_or_accept_customer():
     action = request.json.get("action").title()
     id = request.json.get("id")
     try:
+        customer_status_update = None
         customer = models.Customer.query.filter_by(id=id).first()
+        previous_customer_status = customer.status
         if action == "Approved":
-            customer.status = "APPROVED-1"
+            customer_status_update = "ACCEPTED-1"
+            customer.status = "ACCEPTED-1"
         if action == "Declined":
-            customer.status = "DECLINED-2"
-        try:
-            db.session.merge(customer)
-            db.session.commit()
-        except:
-            db.session.rollback()
-        finally:
-            db.session.close()
+            customer_status_update = "DENIED-2"
+            customer.status = "DENIED-2"
+        
+        dbUpdate(customer)
+        if previous_customer_status == "SANCTION_LIST_NO_FOUND-7" and customer_status_update == "ACCEPTED-1":
+            # move onto the next check against peplist and update status accordingliin
+            checkInListProcess = Process(
+                target=checkInList,
+                args=("peplist.txt",int(customer.id)),
+                daemon=True
+            )
+            checkInListProcess.start()
+
+        MESSAGE = 'Customer Status  for {} Updated to: {}'.format(str(customer.first_name).title(), customer_status_update)
+        
     except Exception as e:
         print(e)
-    customers = refreshCustomerList()
 
-    # start long task here
 
-    return render_template("index.html", customers=customers,  message="Customer has been Added")
+    return redirect(url_for("index"))
+    # customers = refreshCustomerList()
+
+
+    # return render_template("index.html", customers=customers, message=MESSAGE)
 
 
 @app.route("/{}/add-customer".format(API_VERSION), methods=["POST", "GET"])
@@ -131,8 +143,7 @@ def add_customer():
     global MESSAGE
     if request.method == "GET":
         return redirect(url_for("index"))
-    
-    
+       
     customers = refreshCustomerList()
     try:
         first_name = request.form.get('first_name', None)
@@ -148,9 +159,9 @@ def add_customer():
             db.session.add(customer)
             db.session.commit()  
             customers = refreshCustomerList()
-            MESSAGE = "Customer has been added: Status Pending-7. Validating Sanctions List"
+            MESSAGE = "Customer has been added: On Status Pending-7. Validating Sanctions List"
             # list check process here
-            # AYSNC PROCESS HERE
+            # check against sanctions list once created
             checkInListProcess = Process(
                 target=checkInList,
                 args=("sanctionslist.txt",int(customer.id)),
