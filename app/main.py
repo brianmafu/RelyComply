@@ -30,7 +30,7 @@ def refreshCustomerList():
     customers =  db.session.query(models.Customer).all()
     return customers
 
-def dbUpdate(customer=None):
+def dbUpdate(customer):
     if not customer: return
     try:
         db.session.merge(customer)
@@ -52,13 +52,18 @@ def checkInList(list_file_name, customer_id):
         with open(list_file_name) as f:
             lines = f.readlines()
             for line in lines:
-                print('Line: {}'.format(line))
+                print('Search against Line: {}'.format(line))
                 if first_name.lower() in line.lower() or last_name in line.lower():
                     #if user found on the list make them change to appropriate status
-                    if list_file_name == "sanctionlists.txt":
+                    if list_file_name == "sanctionslist.txt":
+                        MESSAGE = 'Customer Status  for {} Updated to: SANCTION_LIST_FOUND-3'.format(customer.first_name)
+                        print('Customer Status  for {} Updated to: SANCTION_LIST_FOUND-3'.format(customer.first_name))
                         customer.status = "SANCTION_LIST_FOUND-3"
                     if list_file_name == "peplist.txt":
                         customer.status = "PEP_LIST_FOUND-5"
+                        MESSAGE = 'Customer Status  for {} Updated to: PEP_LIST_FOUND-5'.format(customer.first_name)
+                        print('Customer Status for {} Updated to: PEP_LIST_FOUND-5'.format(customer.first_name))
+
                     dbUpdate(customer)
                     return True
 
@@ -67,8 +72,14 @@ def checkInList(list_file_name, customer_id):
         # if customer is not found in specific list-update status and save and return False
         if list_file_name == "sanctionlists.txt":
             customer.status = "SANCTION_LIST_NOT_FOUND-4"
+            MESSAGE = 'Customer Status  for {} Updated to: SANCTION_LIST_NOT_FOUND-4'.format(customer.first_name)
+            print('Customer Status  for {} Updated to: SANCTION_LIST_NOT_FOUND-4'.format(customer.first_name))
+
         if list_file_name == "peplist.txt":
             customer.status = "PEP_LIST_NOT_FOUND-6"
+            MESSAGE = 'Customer Status  for {} Updated to: PEP_LIST_NOT_FOUND-6'.format(customer.first_name)
+            print('Customer Status  for {} Updated to: PEP_LIST_NOT_FOUND-6'.format(customer.first_name))
+
         dbUpdate(customer)
         return False
     return False
