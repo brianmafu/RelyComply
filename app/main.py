@@ -39,6 +39,10 @@ def dbUpdate(customer):
     finally:
         db.session.close()
 
+def pause(seconds=1):
+    import time
+    time.sleep(seconds)
+
 # long running process for check user in either sanctions list or pep list
 def checkInList(list_file_name, customer_id):
     if list_file_name:
@@ -66,8 +70,7 @@ def checkInList(list_file_name, customer_id):
                     dbUpdate(customer)
                     return True
 
-                import time
-                time.sleep(1)
+            pause(seconds=1)
         # if customer is not found in specific list-update status and save and return False
         if list_file_name == "sanctionlists.txt":
             customer.status = "SANCTION_LIST_NOT_FOUND-4"
@@ -122,7 +125,6 @@ def decline_or_accept_customer():
                 daemon=True
             )
             checkInListProcess.start()
-
         MESSAGE = 'Customer Status  for {} Updated to: {}'.format(str(customer.first_name).title(), customer_status_update)
         
     except Exception as e:
@@ -130,17 +132,12 @@ def decline_or_accept_customer():
 
 
     return redirect(url_for("index"))
-    # customers = refreshCustomerList()
-
-
-    # return render_template("index.html", customers=customers, message=MESSAGE)
 
 
 @app.route("/{}/add-customer".format(API_VERSION), methods=["POST", "GET"])
 def add_customer():
     """Saves customer information to database"""
 
-    global MESSAGE
     if request.method == "GET":
         return redirect(url_for("index"))
        
