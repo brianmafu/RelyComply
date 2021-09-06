@@ -43,6 +43,25 @@ def pause(seconds=1):
     import time
     time.sleep(seconds)
 
+
+def riskAssesment(customer_id):
+    customer = models.Customer.query.filter_by(id=int(customer_id)).first()    
+    income = float(customer.monthly_income)
+
+    if customer.status == "PEP_LIST_NOT_FOUND-6":
+        customer.status = "ACCEPTED-1"
+        print("Customer status for {} has been ACCEPTED-1-Bank Approved".format(str(customer.first_name).title()))
+    
+    if customer.status == "PEP_LIST_FOUND-5" and income < float(25000):
+        customer.status = "DENIED-2"
+        print("Customer status for {} has been DENIED-2-Bank DENIED".format(str(customer.first_name).title()))
+    else:
+        customer.status = "ACCEPTED-1"
+        print("Customer status for {} has been ACCEPTED-1-Bank Approved".format(str(customer.first_name).title()))
+    
+    dbUpdate(customer)
+    
+
 # long running process for check user in either sanctions list or pep list
 def checkInList(list_file_name, customer_id):
     if list_file_name:
@@ -118,7 +137,7 @@ def decline_or_accept_customer():
             customer.status = "DENIED-2"
         
         dbUpdate(customer)
-        if not previous_customer_status == "SANCTION_LIST_NOT_FOUND-4" and customer_status_update == "ACCEPTED-1":
+        if  (previous_customer_status in ["SANCTION_LIST_FOUND-4", "SANCTION_LIST_FOUND-3"] and customer_status_update == "ACCEPTED-1":
             # move onto the next check against peplist and update status accordingliin
             print("Checking Customer: {} on PEPList".format(str(customer.first_name).title()))
             checkInListProcess = Process(
@@ -127,6 +146,19 @@ def decline_or_accept_customer():
                 daemon=True
             )
             checkInListProcess.start()
+        if (previous_customer_status == "PEP_LIST_FOUND-5" or previous_customer_status == "PEP_LIST_NOT_FOUND-6") and \
+            customer_status_update == "ACCEPTED-1":
+            print("Checking Customer: {} on Risk Assessment".format(str(customer.first_name).title()))
+            checkInListProcess = Process(
+                target=riskAssesment,
+                args=(customer.id,),
+                daemon=True
+            )
+            checkInListProcess.start()
+
+        
+        
+
         MESSAGE = 'Customer Status  for {} Updated to: {}'.format(str(customer.first_name).title(), customer_status_update)
         
     except Exception as e:
