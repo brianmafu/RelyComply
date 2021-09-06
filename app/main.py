@@ -97,6 +97,7 @@ def resource_not_found(exception):
 def index():
 
     customers = refreshCustomerList()
+    global MESSAGE
     return render_template("index.html", customers=customers, message=MESSAGE)
 
 
@@ -117,8 +118,9 @@ def decline_or_accept_customer():
             customer.status = "DENIED-2"
         
         dbUpdate(customer)
-        if previous_customer_status == "SANCTION_LIST_NO_FOUND-7" and customer_status_update == "ACCEPTED-1":
+        if not previous_customer_status == "SANCTION_LIST_NOT_FOUND-4" and customer_status_update == "ACCEPTED-1":
             # move onto the next check against peplist and update status accordingliin
+            print("Checking Customer: {} on PEPList".format(str(customer.first_name).title()))
             checkInListProcess = Process(
                 target=checkInList,
                 args=("peplist.txt",int(customer.id)),
@@ -129,6 +131,7 @@ def decline_or_accept_customer():
         
     except Exception as e:
         print(e)
+        MESSAGE = "Exception: {}".format(str(e))
 
 
     return redirect(url_for("index"))
