@@ -137,7 +137,7 @@ def decline_or_accept_customer():
             customer.status = "DENIED-2"
         
         dbUpdate(customer)
-        if  (previous_customer_status in ["SANCTION_LIST_FOUND-4", "SANCTION_LIST_FOUND-3"] and customer_status_update == "ACCEPTED-1":
+        if  (previous_customer_status in ["SANCTION_LIST_FOUND-4", "SANCTION_LIST_FOUND-3"]) and customer_status_update == "ACCEPTED-1":
             # move onto the next check against peplist and update status accordingliin
             print("Checking Customer: {} on PEPList".format(str(customer.first_name).title()))
             checkInListProcess = Process(
@@ -157,7 +157,7 @@ def decline_or_accept_customer():
             checkInListProcess.start()
 
         
-        
+
 
         MESSAGE = 'Customer Status  for {} Updated to: {}'.format(str(customer.first_name).title(), customer_status_update)
         
